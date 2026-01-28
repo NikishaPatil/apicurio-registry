@@ -17,13 +17,13 @@ export const AppHeader: FunctionComponent<AppHeaderProps> = () => {
         return <></>;
     }
 
-    const logoSrc: string = `${config.uiContextPath() || "/"}apicurio_registry_logo_reverse.svg`;
+    const logoSrc: string = `${config.uiContextPath() || "/"}red-hat-logo-reverse-transparent-100px.png`;
 
     return (
         <Masthead id="icon-router-link">
             <MastheadMain>
-                <MastheadBrand component={props => <Link {...props} to={ appNavigation.createLink("/dashboard") } />}>
-                    <Brand src={logoSrc} alt="Apicurio Registry" heights={{ default: "36px" }} />
+                <MastheadBrand component={props => <Link {...props} to={ appNavigation.createLink("/explore") } />}>
+                    <Brand src={logoSrc} alt="Red Hat build of Apicurio Registry" heights={{ default: "36px" }} />
                 </MastheadBrand>
             </MastheadMain>
             <MastheadContent>

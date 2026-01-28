@@ -47,6 +47,12 @@ export const AppHeaderToolbar: FunctionComponent<AppHeaderToolbarProps> = () => 
                 onClose={() => setIsAboutModalOpen(false)} />
             <Toolbar id="app-header-toolbar" isFullHeight={true}>
                 <ToolbarContent>
+                    <ToolbarGroup>
+                        <span style={{ borderLeft: "1px solid white" }}>&nbsp;</span>
+                    </ToolbarGroup>
+                    <ToolbarGroup>
+                        <span style={{ fontWeight: "bold" }}>Red Hat build of Apicurio Registry</span>
+                    </ToolbarGroup>
                     <ToolbarGroup align={{ default: "alignRight" }}>
                         <ToolbarItem>
                             <Button variant="plain" onClick={() => setIsAboutModalOpen(!isAboutModalOpen)}>
