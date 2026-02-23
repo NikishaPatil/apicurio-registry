@@ -1052,6 +1052,31 @@ The following {registry} configuration options are available for each component 
 |`true`
 |`2.0.0.Final`
 |SQL init
+|`apicurio.storage.connection.retry.backoff-multiplier`
+|`double`
+|`2.0`
+|`3.1.4`
+|Multiplier for exponential backoff between retry attempts
+|`apicurio.storage.connection.retry.enabled`
+|`boolean`
+|`true`
+|`3.1.4`
+|Enable connection retry with exponential backoff for transient database connection failures
+|`apicurio.storage.connection.retry.initial-delay-ms`
+|`long`
+|`1000`
+|`3.1.4`
+|Initial delay in milliseconds before first retry
+|`apicurio.storage.connection.retry.max-attempts`
+|`int`
+|`10`
+|`3.1.4`
+|Maximum number of connection retry attempts
+|`apicurio.storage.connection.retry.max-delay-ms`
+|`long`
+|`30000`
+|`3.1.4`
+|Maximum delay in milliseconds between retry attempts
 |`apicurio.storage.enable-automatic-group-creation`
 |`boolean`
 |`true`
@@ -1062,11 +1087,6 @@ The following {registry} configuration options are available for each component 
 |`sql`
 |`3.0.0`
 |The type of storage to use for the registry
-|`apicurio.storage.orphan-cleanup.every`
-|`duration`
-|`1h`
-|`3.x.x`
-|Interval for orphaned content cleanup job (e.g., 1h, 30m, 86400s). Set to "off" to disable.
 |`apicurio.storage.read-only.enabled`
 |`boolean [dynamic]`
 |`false`
@@ -1409,6 +1429,11 @@ The following {registry} configuration options are available for each component 
 |`apicurio.semver.validation.enabled.dynamic.allow`
 |`unknown`
 |`${apicurio.config.dynamic.allow-all}`
+|
+|
+|`apicurio.storage.orphan-cleanup.every`
+|`unknown`
+|`1h`
 |
 |
 |`apicurio.storage.read-only.enabled.dynamic.allow`
