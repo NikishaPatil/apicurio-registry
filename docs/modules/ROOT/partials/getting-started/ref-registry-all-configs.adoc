@@ -1097,6 +1097,11 @@ The following {registry} configuration options are available for each component 
 |`false`
 |`3.0.0`
 |Enable Registry storage read-only mode
+|`apicurio.storage.references.max-depth`
+|`int`
+|`100`
+|`3.0.6`
+|Maximum recursion depth for resolving schema references. Prevents stack overflow from deeply nested schemas.
 |`apicurio.storage.snapshot.location`
 |`string`
 |`./`
