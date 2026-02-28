@@ -41,7 +41,7 @@ jobs:
           git fetch upstream main
           git checkout main
           git reset --hard upstream/main
-          git push origin main 
+          git push origin main --force
         # Target main now exactly matches upstream main
 
       # --------------------------------------------------
