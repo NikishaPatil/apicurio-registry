@@ -1,4 +1,4 @@
-name: Sync Upstream Main
+name: Sync Upstream Main Workflow
 
 on:
   schedule:
