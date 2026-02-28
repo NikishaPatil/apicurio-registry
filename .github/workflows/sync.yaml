@@ -1,105 +1,94 @@
-name: Sync upstream main and releases
+name: Sync and Brand Apicurio
 
 on:
   schedule:
     - cron: "0 */6 * * *"
   workflow_dispatch:
 
-permissions:
-  contents: write
-
 jobs:
   sync:
-    runs-on: ubuntu-22.04
-
-    env:
-      UPSTREAM_REPO: https://github.com/Apicurio/apicurio-registry.git
-      BRANDING_BRANCH: rhboar-branding
+    runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout target repository
+      - name: Checkout your repository
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
 
-      - name: Configure git identity
+      - name: Configure Git
         run: |
-          git config user.name "apicurio-sync-bot"
-          git config user.email "apicurio-sync-bot@users.noreply.github.com"
+          git config user.name "github-actions"
+          git config user.email "github-actions@github.com"
 
-      - name: Add upstream remote
+      - name: Add upstream
         run: |
-          git remote add upstream "${UPSTREAM_REPO}" || true
+          git remote add upstream https://github.com/Apicurio/apicurio-registry.git || true
           git fetch upstream --tags
 
-      # --------------------------------------------------
-      # PART 1: Safely Sync main
-      # --------------------------------------------------
-      - name: Sync main branch with upstream
+      # ----------------------------------
+      # Sync main branch
+      # ----------------------------------
+
+      - name: Sync main with upstream
         run: |
           git fetch upstream main
           git fetch origin main
 
-          # Ensure local main tracks origin/main (avoid ambiguity)
+          # Avoid ambiguous branch issue
           git checkout -B main origin/main
 
           LOCAL=$(git rev-parse main)
           UPSTREAM=$(git rev-parse upstream/main)
 
-          echo "Local main:    $LOCAL"
+          echo "Local main: $LOCAL"
           echo "Upstream main: $UPSTREAM"
 
-          if [ "$LOCAL" = "$UPSTREAM" ]; then
-            echo "Main already synced. Skipping."
-          else
-            echo "Updating main to match upstream."
+          if [ "$LOCAL" != "$UPSTREAM" ]; then
+            echo "Updating main branch..."
             git reset --hard upstream/main
             git push origin main --force
+          else
+            echo "Main already up to date."
           fi
 
-      # --------------------------------------------------
-      # PART 2: Sync latest release tag with branding
-      # --------------------------------------------------
-      - name: Determine latest upstream tag
+      # ----------------------------------
+      # Get latest upstream tag
+      # ----------------------------------
+
+      - name: Get latest upstream tag
         id: latest
         run: |
-          LATEST_TAG=$(git tag -l --sort=-v:refname | head -n 1)
-          echo "latest_tag=${LATEST_TAG}" >> "$GITHUB_OUTPUT"
-          echo "Latest tag: $LATEST_TAG"
+          LATEST=$(git describe --tags --abbrev=0 upstream/main)
+          echo "latest_tag=$LATEST" >> "$GITHUB_OUTPUT"
 
-      - name: Check if tag already exists in origin
+      # ----------------------------------
+      # Check if tag exists in YOUR repo
+      # ----------------------------------
+
+      - name: Check if tag exists in origin
         id: check
         run: |
           if git ls-remote --tags origin | grep -q "refs/tags/${{ steps.latest.outputs.latest_tag }}$"; then
             echo "exists=true" >> "$GITHUB_OUTPUT"
-            echo "Tag already exists in origin."
           else
             echo "exists=false" >> "$GITHUB_OUTPUT"
-            echo "Tag does not exist in origin."
           fi
 
-      - name: Create temporary release branch from upstream tag
-        if: steps.check.outputs.exists == 'false'
-        run: |
-          git checkout -B release-tmp "refs/tags/${{ steps.latest.outputs.latest_tag }}"
+      # ----------------------------------
+      # Create tag + release ONLY in your repo
+      # ----------------------------------
 
-      - name: Fetch branding branch
-        if: steps.check.outputs.exists == 'false'
-        run: |
-          git fetch origin "${BRANDING_BRANCH}"
-
-      - name: Cherry-pick latest branding commit
-        if: steps.check.outputs.exists == 'false'
-        run: |
-          BRANDING_COMMIT=$(git rev-parse "origin/${BRANDING_BRANCH}")
-          git cherry-pick "${BRANDING_COMMIT}"
-
-      - name: Create release tag
+      - name: Create branded tag
         if: steps.check.outputs.exists == 'false'
         run: |
           git tag "${{ steps.latest.outputs.latest_tag }}"
-
-      - name: Push release tag
-        if: steps.check.outputs.exists == 'false'
-        run: |
           git push origin "${{ steps.latest.outputs.latest_tag }}"
+
+      - name: Create GitHub Release
+        if: steps.check.outputs.exists == 'false'
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ steps.latest.outputs.latest_tag }}
+          name: Apicurio Registry ${{ steps.latest.outputs.latest_tag }} (Branded)
+          body: |
+            Synced from upstream Apicurio release.
