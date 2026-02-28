@@ -1,0 +1,62 @@
+name: Downstream Release Automation
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  downstream-release:
+    runs-on: ubuntu-22.04
+
+    env:
+      UPSTREAM_REPO: https://github.com/Apicurio/apicurio-registry.git
+      BRANDING_BRANCH: rhboar-branding
+
+    steps:
+      - name: Checkout fork
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Configure git identity
+        run: |
+          git config user.name "apicurio-sync-bot"
+          git config user.email "apicurio-sync-bot@users.noreply.github.com"
+
+      - name: Add upstream and fetch tags
+        run: |
+          git remote add upstream "${UPSTREAM_REPO}" || true
+          git fetch upstream --tags
+
+      - name: Determine latest upstream tag
+        id: latest
+        run: |
+          LATEST_TAG=$(git tag -l --sort=-v:refname | head -n 1)
+          echo "latest_tag=${LATEST_TAG}" >> "$GITHUB_OUTPUT"
+          echo "Latest upstream tag: $LATEST_TAG"
+
+      - name: Create downstream branch and apply branding
+        run: |
+          TAG="${{ steps.latest.outputs.latest_tag }}"
+          BRANCH="${TAG}-redhat"
+
+          # Skip if branch already exists
+          if git ls-remote --exit-code --heads origin "$BRANCH"; then
+            echo "Branch $BRANCH already exists. Skipping."
+            exit 0
+          fi
+
+          # Create branch from upstream tag
+          git checkout -b "$BRANCH" "refs/tags/$TAG"
+
+          # Fetch branding branch
+          git fetch origin "${BRANDING_BRANCH}"
+
+          # Cherry-pick latest branding commit
+          BRANDING_COMMIT=$(git rev-parse "origin/${BRANDING_BRANCH}")
+          git cherry-pick "${BRANDING_COMMIT}"
+
+          # Push downstream branch
+          git push origin "$BRANCH"
