@@ -13,7 +13,7 @@ jobs:
     runs-on: ubuntu-22.04
 
     env:
-      UPSTREAM_REPO: https://github.com/NikishaPatil/apicurio-registry.git
+      UPSTREAM_REPO: https://github.com/Apicurio/apicurio-registry.git
       BRANDING_BRANCH: rhboar-branding
 
     steps:
