@@ -1,0 +1,89 @@
+name: Sync upstream main and releases
+
+on:
+  schedule:
+    - cron: "0 */6 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  sync:
+    runs-on: ubuntu-22.04
+
+    env:
+      UPSTREAM_REPO: https://github.com/Apicurio/apicurio-registry.git
+      BRANDING_BRANCH: rhboar-branding
+
+    steps:
+      - name: Checkout target repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+        # Full history required for tags and branch sync
+
+      - name: Configure git identity
+        run: |
+          git config user.name "apicurio-sync-bot"
+          git config user.email "apicurio-sync-bot@users.noreply.github.com"
+
+      - name: Add upstream remote
+        run: |
+          git remote add upstream "${UPSTREAM_REPO}"
+          git fetch upstream --tags
+
+      # --------------------------------------------------
+      # PART 1: Keep main branch in sync
+      # --------------------------------------------------
+      - name: Sync main branch with upstream
+        run: |
+          git fetch upstream main
+          git checkout main
+          git reset --hard upstream/main
+          git push origin main --force
+        # Target main now exactly matches upstream main
+
+      # --------------------------------------------------
+      # PART 2: Sync latest release tag with branding
+      # --------------------------------------------------
+      - name: Determine latest upstream tag
+        id: latest
+        run: |
+          LATEST_TAG=$(git tag -l --sort=-v:refname | head -n 1)
+          echo "latest_tag=${LATEST_TAG}" >> "$GITHUB_OUTPUT"
+
+      - name: Check if tag already exists in target
+        id: check
+        run: |
+          if git rev-parse "${{ steps.latest.outputs.latest_tag }}" >/dev/null 2>&1; then
+            echo "exists=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "exists=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Create temporary release branch from upstream tag
+        if: steps.check.outputs.exists == 'false'
+        run: |
+          git checkout -B release-tmp "refs/tags/${{ steps.latest.outputs.latest_tag }}"
+
+      - name: Fetch branding branch
+        if: steps.check.outputs.exists == 'false'
+        run: |
+          git fetch origin "${BRANDING_BRANCH}"
+
+      - name: Cherry-pick latest branding commit
+        if: steps.check.outputs.exists == 'false'
+        run: |
+          BRANDING_COMMIT=$(git rev-parse "origin/${BRANDING_BRANCH}")
+          git cherry-pick "${BRANDING_COMMIT}"
+
+      - name: Create release tag
+        if: steps.check.outputs.exists == 'false'
+        run: |
+          git tag "${{ steps.latest.outputs.latest_tag }}"
+
+      - name: Push release tag
+        if: steps.check.outputs.exists == 'false'
+        run: |
+          git push origin "${{ steps.latest.outputs.latest_tag }}"
