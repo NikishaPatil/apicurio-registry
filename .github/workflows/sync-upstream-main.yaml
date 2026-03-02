@@ -2,7 +2,7 @@ name: Sync Upstream Main Workflow
 
 on:
   schedule:
-    - cron: "0 */6 * * *"
+    - cron: "30 5 * * *"   # Runs daily at 11:00 AM IST (05:30 UTC)
   workflow_dispatch:
 
 jobs:
@@ -22,7 +22,7 @@ jobs:
 
       - name: Add upstream
         run: |
-          git remote add upstream https://github.com/apicurio/apicurio-registry.git
+          git remote add upstream https://github.com/apicurio/apicurio-registry.git || true
           git fetch upstream
 
       - name: Check if sync is needed
