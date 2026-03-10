@@ -5,11 +5,6 @@ on:
     - cron: "30 5 * * *"   # Runs daily at 11:00 AM IST (05:30 UTC)
   workflow_dispatch:
 
-# REQUIRED: allows workflow files to be updated during sync
-permissions:
-  contents: write
-  workflows: write
-
 jobs:
   sync:
     runs-on: ubuntu-latest
