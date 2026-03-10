@@ -2,7 +2,7 @@ name: Sync Upstream Main Workflow
 
 on:
   schedule:
-    - cron: "30 5 * * *"   # Runs daily at 11:00 AM IST (05:30 UTC)
+    - cron: "30 5 * * *"   # 11:00 AM IST (05:30 UTC) daily
   workflow_dispatch:
 
 jobs:
@@ -13,7 +13,7 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
         with:
-          fetch-depth: 0
+          fetch-depth: 0   # required for rebase
 
       - name: Configure Git
         run: |
@@ -24,18 +24,20 @@ jobs:
         run: |
           git remote add upstream https://github.com/apicurio/apicurio-registry.git || true
           git fetch upstream
+          git fetch origin
 
       - name: Check if sync is needed
         id: check
         run: |
           git checkout main
+
           LOCAL=$(git rev-parse main)
-          REMOTE=$(git rev-parse upstream/main)
+          UPSTREAM=$(git rev-parse upstream/main)
 
           echo "Local main: $LOCAL"
-          echo "Upstream main: $REMOTE"
+          echo "Upstream main: $UPSTREAM"
 
-          if [ "$LOCAL" = "$REMOTE" ]; then
+          if [ "$LOCAL" = "$UPSTREAM" ]; then
             echo "No updates found. Skipping sync."
             echo "sync_needed=false" >> $GITHUB_OUTPUT
           else
@@ -43,8 +45,16 @@ jobs:
             echo "sync_needed=true" >> $GITHUB_OUTPUT
           fi
 
-      - name: Sync main branch
+      - name: Sync main branch (safe rebase)
         if: steps.check.outputs.sync_needed == 'true'
         run: |
+          git checkout main
+
+          # Make sure local includes latest fork commits (SAFE — no loss)
+          git pull origin main --rebase
+
+          # Rebase fork onto upstream
           git pull upstream main --rebase
-          git push origin main
+
+          # Push rewritten history safely
+          git push origin main --force-with-lease
