@@ -42,21 +42,29 @@ jobs:
           TAG="${{ steps.latest.outputs.latest_tag }}"
           BRANCH="${TAG}-redhat"
 
-          # Skip if branch already exists
-          if git ls-remote --exit-code --heads origin "$BRANCH"; then
-            echo "Branch $BRANCH already exists. Skipping."
-            exit 0
-          fi
-
-          # Create branch from upstream tag
-          git checkout -b "$BRANCH" "refs/tags/$TAG"
-
           # Fetch branding branch
           git fetch origin "${BRANDING_BRANCH}"
-
-          # Cherry-pick latest branding commit
           BRANDING_COMMIT=$(git rev-parse "origin/${BRANDING_BRANCH}")
-          git cherry-pick "${BRANDING_COMMIT}"
 
-          # Push downstream branch
-          git push origin "$BRANCH"
+          if git ls-remote --exit-code --heads origin "$BRANCH"; then
+            echo "Branch $BRANCH already exists. Checking for branding changes..."
+
+            git fetch origin "$BRANCH"
+            # Check if branding commit message is already present on the branch
+            if git log "origin/${BRANCH}" --grep="$(git log -1 --format='%s' "${BRANDING_COMMIT}")" --oneline | grep -q .; then
+              echo "Downstream release branch $BRANCH is up to date and applied with branding changes."
+              exit 0
+            fi
+
+            # Branding not applied yet — apply it
+            echo "Branding changes not found on $BRANCH. Applying..."
+            git checkout -b "$BRANCH" "origin/${BRANCH}"
+            git cherry-pick "${BRANDING_COMMIT}"
+            git push origin "$BRANCH"
+          else
+            # Create new branch from upstream tag and apply branding
+            echo "Creating downstream branch $BRANCH from tag $TAG..."
+            git checkout -b "$BRANCH" "refs/tags/$TAG"
+            git cherry-pick "${BRANDING_COMMIT}"
+            git push origin "$BRANCH"
+          fi
