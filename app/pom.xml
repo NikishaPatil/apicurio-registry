@@ -4,7 +4,7 @@
   <parent>
     <groupId>io.apicurio</groupId>
     <artifactId>apicurio-registry</artifactId>
-    <version>3.2.0-SNAPSHOT</version>
+    <version>3.2.2-SNAPSHOT</version>
     <relativePath>../pom.xml</relativePath>
   </parent>
 
@@ -14,6 +14,7 @@
 
   <properties>
     <projectRoot>${project.basedir}/..</projectRoot>
+    <maven.compiler.release>21</maven.compiler.release>
     <groups/>
   </properties>
 
@@ -22,11 +23,6 @@
     <dependency>
       <groupId>io.apicurio</groupId>
       <artifactId>apicurio-registry-common</artifactId>
-    </dependency>
-
-    <dependency>
-      <groupId>io.apicurio</groupId>
-      <artifactId>apicurio-registry-utils-kafka</artifactId>
     </dependency>
 
     <dependency>
@@ -49,17 +45,6 @@
       <groupId>io.apicurio</groupId>
       <artifactId>apicurio-registry-config-index-deployment</artifactId>
       <scope>provided</scope>
-    </dependency>
-
-    <dependency>
-      <groupId>io.apicurio</groupId>
-      <artifactId>apicurio-common-rest-client-jdk</artifactId>
-      <scope>test</scope>
-    </dependency>
-
-    <dependency>
-      <groupId>io.apicurio</groupId>
-      <artifactId>apicurio-common-rest-client-vertx</artifactId>
     </dependency>
 
     <dependency>
@@ -201,6 +186,12 @@
       <groupId>commons-codec</groupId>
       <artifactId>commons-codec</artifactId>
     </dependency>
+
+    <!-- Elasticsearch Java client for content search indexing -->
+    <dependency>
+      <groupId>io.quarkus</groupId>
+      <artifactId>quarkus-elasticsearch-java-client</artifactId>
+    </dependency>
     <dependency>
       <groupId>org.apache.commons</groupId>
       <artifactId>commons-lang3</artifactId>
@@ -265,6 +256,11 @@
     <dependency>
       <groupId>io.quarkus</groupId>
       <artifactId>quarkus-test-common</artifactId>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>io.quarkus</groupId>
+      <artifactId>quarkus-junit5-mockito</artifactId>
       <scope>test</scope>
     </dependency>
     <dependency>
@@ -440,12 +436,6 @@
       </plugin>
 
       <plugin>
-        <groupId>kr.motd.maven</groupId>
-        <artifactId>os-maven-plugin</artifactId>
-        <version>1.7.1</version>
-      </plugin>
-
-      <plugin>
         <groupId>io.apicurio</groupId>
         <artifactId>apicurio-codegen-maven-plugin</artifactId>
         <version>${version.apicurio-codegen-plugin}</version>
@@ -458,7 +448,7 @@
       </plugin>
 
       <plugin>
-        <groupId>org.xolstice.maven.plugins</groupId>
+        <groupId>io.github.ascopes</groupId>
         <artifactId>protobuf-maven-plugin</artifactId>
         <version>${proto-plugin.version}</version>
       </plugin>
@@ -506,13 +496,12 @@
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-surefire-plugin</artifactId>
         <configuration>
-          <skipExec>${skipTests}</skipExec>
-          <skipTests>${skipAppTests}</skipTests>
           <groups>${groups}</groups>
           <forkCount>1</forkCount>
           <systemPropertyVariables>
             <java.util.logging.manager>org.jboss.logmanager.LogManager</java.util.logging.manager>
             <org.jboss.logging.provider>jboss</org.jboss.logging.provider>
+            <project.build.directory>${project.build.directory}</project.build.directory>
           </systemPropertyVariables>
         </configuration>
       </plugin>
@@ -614,18 +603,6 @@
               </archiverConfig>
               <tarLongFileMode>${tar.long.file.mode}</tarLongFileMode>
             </configuration>
-          </execution>
-        </executions>
-      </plugin>
-      <plugin>
-        <groupId>kr.motd.maven</groupId>
-        <artifactId>os-maven-plugin</artifactId>
-        <executions>
-          <execution>
-            <goals>
-              <goal>detect</goal>
-            </goals>
-            <phase>initialize</phase>
           </execution>
         </executions>
       </plugin>
@@ -737,20 +714,20 @@
       </plugin>
 
       <plugin>
-        <groupId>org.xolstice.maven.plugins</groupId>
+        <groupId>io.github.ascopes</groupId>
         <artifactId>protobuf-maven-plugin</artifactId>
-        <extensions>true</extensions>
         <executions>
           <execution>
             <id>gencode</id>
             <goals>
-              <goal>compile</goal>
-              <goal>test-compile</goal>
+              <goal>generate</goal>
             </goals>
             <phase>generate-sources</phase>
             <configuration>
-              <protoSourceRoot>./src/test/resources/schema</protoSourceRoot>
-              <protocArtifact>com.google.protobuf:protoc:${protobuf.version}:exe:${os.detected.classifier}</protocArtifact>
+              <sourceDirectories>
+                <sourceDirectory>./src/test/resources/schema</sourceDirectory>
+              </sourceDirectories>
+              <protoc>${protobuf.version}</protoc>
             </configuration>
           </execution>
         </executions>

@@ -2,7 +2,18 @@ package io.apicurio.registry.storage.impl.kafkasql;
 
 import io.apicurio.common.apps.config.DynamicConfigPropertyDto;
 import io.apicurio.registry.content.ContentHandle;
-import io.apicurio.registry.events.*;
+import io.apicurio.registry.events.ArtifactCreated;
+import io.apicurio.registry.events.ArtifactDeleted;
+import io.apicurio.registry.events.ArtifactMetadataUpdated;
+import io.apicurio.registry.events.ArtifactRuleConfigured;
+import io.apicurio.registry.events.ArtifactVersionCreated;
+import io.apicurio.registry.events.ArtifactVersionDeleted;
+import io.apicurio.registry.events.ArtifactVersionMetadataUpdated;
+import io.apicurio.registry.events.GlobalRuleConfigured;
+import io.apicurio.registry.events.GroupCreated;
+import io.apicurio.registry.events.GroupDeleted;
+import io.apicurio.registry.events.GroupMetadataUpdated;
+import io.apicurio.registry.events.GroupRuleConfigured;
 import io.apicurio.registry.logging.Logged;
 import io.apicurio.registry.metrics.StorageMetricsApply;
 import io.apicurio.registry.metrics.health.liveness.PersistenceExceptionLivenessApply;
@@ -16,7 +27,7 @@ import io.apicurio.registry.rules.validity.ValidityLevel;
 import io.apicurio.registry.storage.RegistryStorage;
 import io.apicurio.registry.storage.StorageEvent;
 import io.apicurio.registry.storage.StorageEventType;
-import io.apicurio.registry.storage.decorator.RegistryStorageDecoratorReadOnlyBase;
+import io.apicurio.registry.storage.decorator.ReadOnlyDelegatingStorage;
 import io.apicurio.registry.storage.dto.*;
 import io.apicurio.registry.storage.error.ArtifactNotFoundException;
 import io.apicurio.registry.storage.error.GroupAlreadyExistsException;
@@ -85,7 +96,7 @@ import static io.apicurio.registry.utils.ConcurrentUtil.blockOnResult;
 @StorageMetricsApply
 @Logged
 @LookupIfProperty(name = "apicurio.storage.kind", stringValue = "kafkasql")
-public class KafkaSqlRegistryStorage extends RegistryStorageDecoratorReadOnlyBase implements RegistryStorage {
+public class KafkaSqlRegistryStorage extends ReadOnlyDelegatingStorage implements RegistryStorage {
 
     @Inject
     Logger log;
@@ -461,6 +472,25 @@ public class KafkaSqlRegistryStorage extends RegistryStorageDecoratorReadOnlyBas
         List<ArtifactReferenceDto> references = contentDto != null ? contentDto.getReferences() : null;
         var message = new CreateArtifactVersion10Message(groupId, artifactId, version, artifactType,
                 contentType, content, references, metaData, branches, isDraft, dryRun, owner);
+        var uuid = blockOnResult(submitter.submitMessage(message));
+        ArtifactVersionMetaDataDto versionMetaDataDto = (ArtifactVersionMetaDataDto) coordinator
+                .waitForResponse(uuid);
+        outboxEvent.fire(KafkaSqlOutboxEvent.of(ArtifactVersionCreated.of(versionMetaDataDto)));
+        return versionMetaDataDto;
+    }
+
+    @Override
+    public ArtifactVersionMetaDataDto createArtifactVersionIfLatest(String groupId, String artifactId,
+            String version, String artifactType, ContentWrapperDto contentDto,
+            EditableVersionMetaDataDto metaData, List<String> branches, boolean isDraft, String owner,
+            int expectedBaseVersionOrder, EditableArtifactMetaDataDto artifactMetaData)
+            throws RegistryStorageException {
+        String content = contentDto != null ? contentDto.getContent().content() : null;
+        String contentType = contentDto != null ? contentDto.getContentType() : null;
+        List<ArtifactReferenceDto> references = contentDto != null ? contentDto.getReferences() : null;
+        var message = new CreateArtifactVersionIfLatest11Message(groupId, artifactId, version, artifactType,
+                contentType, content, references, metaData, branches, isDraft, owner,
+                expectedBaseVersionOrder, artifactMetaData);
         var uuid = blockOnResult(submitter.submitMessage(message));
         ArtifactVersionMetaDataDto versionMetaDataDto = (ArtifactVersionMetaDataDto) coordinator
                 .waitForResponse(uuid);
@@ -1106,4 +1136,5 @@ public class KafkaSqlRegistryStorage extends RegistryStorageDecoratorReadOnlyBas
         // No op, the event is created by the event processor.
         return event.getId();
     }
+
 }
